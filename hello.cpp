@@ -1,7 +1,11 @@
 #include <iostream>
+using std::cin;
+using std::cout;
+using std::endl;
+using std::ios;
 
 int main(){
-    std::cout<<"hello world"<<std::endl;
+    cout<<"hello"<<endl;
+
     return 0;
-    
 }
