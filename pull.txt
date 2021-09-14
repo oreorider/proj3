@@ -1,6 +1,1 @@
-<<<<<<< HEAD
-pull this file from localrepo
-
-=======
 pull from my_working_dir (origin)
->>>>>>> 5281c6f6736ae98842898ef203804f5433a46179
