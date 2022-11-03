@@ -7,6 +7,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <vector>
+#include <stack>
 using namespace std;
 
 double CalculateExpression(const char s[], int &idx, int level = 1);
@@ -16,13 +17,17 @@ int OperatorPriority(char op);
 double CalculateOperator(double left, double right, char op);
 void Solve(char s[], int idx, int add, int sub, int mul, int div, int pow, bool seq_pow);
 int FindSpace(const char s[], int idx);
+string to_postfix(const char s[]);
+string simplify_postfix(string postfix);
+bool checkseq(string postfix);
 
 const int MAX_EXPR_LENGTH = 100;	  // Maximum number of the characters in a single expression
 const int MAX_OPERATOR_LEVEL = 3;	  // Maximum level of the priority of operators
 double max_val = -INFINITY;			  // Maximum value of mathematical expressions
 char max_s[MAX_EXPR_LENGTH + 1] = ""; // Expression which returns the maximum value
-int two_power=0;
 vector<string> postfix;
+
+
 
 int main()
 {
@@ -52,13 +57,23 @@ int main()
 	}
 
 	 //TURN ON TO RUN CALCULATOR
+	/*
+	//double answer=CalculateExpression(s, idx, 1);
+	double answer;
+	string postfix_string=to_postfix(s);
+	for(auto &ch : postfix_string){
+		cout<<ch;
+	}
+	cout<<endl;
+	for(int i=0; i<postfix_string.length()-1; i++){
+		if(postfix_string.at(i)=='^' && postfix_string.at(i+1)=='^'){
+			cout<<"two powers in a row"<<endl;
+		}
+	}
 	
-	double answer=CalculateExpression(s, idx, 1);
+	cout<<endl;
 	cout<<"answer is : "<<answer<<endl;
-	for(const auto& value: postfix) {
-    cout << value << " ";
-}
-	return 0;
+	return 0;*/
 	
 	int add, sub, mul, div, pow, enter;
 	cout << "Number of add sub mul div pow\n>>";
@@ -70,6 +85,12 @@ int main()
 
 	if (isnan(max_val) || isinf(max_val))
 	{ // isnan, isinf function, end of c-string = 0
+		cout<<"express that caused error was ";
+		for(int i=0; i<MAX_EXPR_LENGTH; i++){
+			
+			cout<<max_s[i];
+		}
+		cout<<endl;
 		cout << "Error while evaluating!" << endl;
 	}
 	else
@@ -96,13 +117,29 @@ void Solve(char s[], int idx, int add, int sub, int mul, int div, int pow, bool 
 		
 		for (int i = 0; i < MAX_EXPR_LENGTH; i++)//PRINT EACH EXPRESSION
 		{
-			cout << s[i] << " ";
+			cout << s[i];
 		}
 		cout << endl;
 		try
 		{
-			currentValue = CalculateExpression(s, new_idx, 1);
-			two_power=0;
+			
+			string postfix_string=to_postfix(s);
+			
+			for(int i=0; i<postfix_string.length()-1; i++){//print out postfix string
+				cout<<postfix_string.at(i);
+			}
+			if(checkseq(postfix_string)){
+				seq_pow=true;
+				cout<<"value rejected for seq"<<endl;
+			}
+			cout<<endl;
+			if(seq_pow){
+				currentValue=0;
+			}
+			else{
+				currentValue = CalculateExpression(s, new_idx, 1);
+			}
+
 		}
 		catch (const invalid_argument &e)
 		{
@@ -291,10 +328,6 @@ double CalculateOperator(double left, double right, char op)
 	{
 		//cout<<left<<" ^ "<<right<<endl;
 		double powered=pow(left,right);
-		if(isinf(powered) || isnan(powered)){
-			throw invalid_argument("overflowed because sequential power");
-			return 0;
-		}
 		return pow(left, right);
 	}
 	else
@@ -326,38 +359,184 @@ double CalculateExpression(const char s[], int &idx, int level)
 	int twice=0;
 	returnValue = CalculateExpression(s, idx, level + 1);
 
+	/*
+	if(OperatorPriority(s[idx])==3 && level==3){
+			idx+=1;
+			EvaluateTerm(s, idx);
+	}*/
 
 	while (OperatorPriority(s[idx]) == level)
 	{
-		/*
-		if (level == 3)
-		{
-			twice++;
-			two_power++;
-		}
-		if(level!=3){
-			two_power=0;
-		}
-		if (two_power==2)
-		{
-			cout << "cannot have two ^ in a row" << endl;
-			cout<<endl;
-			two_power=0;
-			throw invalid_argument("two pow in a row");
-		}*/
 		char oper = s[idx];
 		idx += 1;
 		
 		double operand2 = CalculateExpression(s, idx, level + 1);
-		postfix.push_back(to_string(returnValue));
-		postfix.push_back(to_string(operand2));
-		string op={oper};
-		postfix.push_back(op);
-		
-		
-
 		returnValue = CalculateOperator(returnValue, operand2, oper);
 
 	}
 	return returnValue;
+}
+
+string to_postfix(const char s[]){
+	stack<char> stk;
+	stk.push('$');
+	string postfix="";
+
+	for(int i=0; i<MAX_EXPR_LENGTH; i++){
+		if(isdigit(s[i]) || s[i]=='.'){
+			while(isdigit(s[i]) || s[i]=='.'){//is number or decimal point
+				postfix.push_back(s[i]);
+				i+=1;
+			}
+			postfix.push_back(' ');
+			i-=1;
+		}
+		else if(s[i]=='('){
+			stk.push('(');
+			if(s[i+1]=='-'){
+				stk.push('0');
+				i++;
+			}
+		}
+		else if(s[i]=='^'){
+			stk.push('^');
+		}
+		else if(s[i]==')'){
+			while(stk.top()!='$' && stk.top()!='('){
+				postfix+=stk.top();
+				stk.pop();
+			}
+			stk.pop();
+		}
+		else{
+			if(OperatorPriority(s[i])>OperatorPriority(stk.top())){
+				stk.push(s[i]);
+			}
+			else{
+				while(stk.top()!='$' && OperatorPriority(s[i])<=OperatorPriority(stk.top())){
+					postfix.push_back(stk.top());
+					stk.pop();
+				}
+				stk.push(s[i]);
+			}
+		}
+	}
+	while(stk.top()!='$'){
+		postfix.push_back(stk.top());
+		stk.pop();
+	}
+	return postfix;
+}
+/*
+string simplify_postfix(string postfix){
+	int real_length=0;
+	for(int i=0; i<postfix.length(); i++){
+		if(postfix.at(i)!='\0'){
+			real_length++;
+		}
+	}
+	cout<<"================"<<endl;
+	cout<<"real length is "<<real_length<<endl;
+
+	stack<string> stk;
+	stk.push("$");
+	cout<<"size of string"<<endl;
+	cout<<endl;
+	cout<<postfix.length()<<endl;
+	for(int i=0; i<real_length; i++){
+		if(isdigit(postfix.at(i)) || postfix.at(i)=='.'){
+			int numberlength=0;
+			string pushstring="";
+			int x=i;
+			while(postfix.at(x)!=' '){
+				numberlength+=1;
+				x+=1;
+			}
+			pushstring=postfix.substr(i, numberlength);
+			i+=numberlength;
+			stk.push(pushstring);
+		}
+		else if(postfix.at(i)=='^'){
+			string pushstring="^";
+			stk.push(pushstring);
+		}
+		else{
+			string str_val1=stk.top();
+			stk.pop();
+			string str_val2=stk.top();
+			stk.pop();
+			double val1=stod(str_val1);
+			double val2=stod(str_val2);
+			switch(postfix[i]){
+				case '+':
+					stk.push(to_string(val2+val1));
+					break;
+				case '-':
+					stk.push(to_string(val2-val1));
+					break;
+				case '*':
+					stk.push(to_string(val2*val1));
+					break;
+				case '/':
+					stk.push(to_string(val2/val1));
+					break;
+				case '^':
+					stk.push(to_string(val2));
+					stk.push(to_string(val1));
+					break;
+			}
+		}
+	}
+	string returnString="";
+	while(stk.top()!="$"){
+		returnString.append(stk.top());
+		stk.pop();
+	}
+	return returnString;
+}*/
+
+bool checkseq(string postfix){
+	int strlen;
+	bool last=false;;
+	for(int i=0; i<postfix.length(); i++){//^^ case
+		if(postfix.at(i)!='\0'){
+			strlen++;
+			if(postfix.at(i)=='^' && postfix.at(i+1)=='^'){
+				return true;
+			}
+		}
+	}
+	if(postfix.at(strlen-1)=='^'){
+		last=true;
+	}
+	int iter=strlen-1;
+	if(last){//(1 2) (3 (4 5)) case
+		while(!isdigit(postfix.at(iter)) || postfix.at(iter)==' ' || postfix.at(iter)=='.'){
+			iter--;
+			if(iter<=0) return false;
+		}
+		//if(iter<0) return false;
+		while(isdigit(postfix.at(iter)) || postfix.at(iter)==' ' || postfix.at(iter)=='.'){
+			if(iter<=0) return false;
+			iter--;
+		}
+		if(postfix.at(iter)=='^'){
+			return true;
+		}
+	}
+
+	iter=strlen-1;
+	while(postfix.at(iter)!=' '){// (1^2)^3 case
+		if(iter<=0) return false;
+		iter--;
+	}
+	while(isdigit(postfix.at(iter)) || postfix.at(iter)=='.'){
+		if(iter<=0) return false;
+		iter--;
+	}
+	if(postfix.at(iter)=='^'){
+		return true;
+	}
+	return false;
+
 }
